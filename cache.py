@@ -670,6 +670,11 @@ class VectorStore:
             self.manifest.transaction(statements)
             return len(pending)
 
+    def clear_prefetched(self) -> None:
+        """Drop prefetched vectors that no paper asked for."""
+        with self._lock:
+            self._prefetched.clear()
+
     def delete(self, paper_keys: Sequence[str]) -> None:
         with self._lock:
             for key in paper_keys:
@@ -923,7 +928,9 @@ class PaperCache:
             self.vectors.prefetch(keys)
 
     def flush(self) -> None:
+        """End of a batch: commit new vectors, drop unused prefetched ones."""
         self.vectors.flush()
+        self.vectors.clear_prefetched()
 
     # ----------------------------------------------------------------- #
     # Parsed layer

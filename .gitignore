@@ -34,8 +34,8 @@ inputs/
 *.log
 
 # Paper lists are personal; keep your own links out of the repository
-links*.txt
-papers*.txt
+*links*.txt
+*papers*.txt
 
 # Secrets
 .env
