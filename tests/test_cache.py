@@ -78,6 +78,7 @@ def test_second_run_makes_zero_embedding_calls(tmp_path: Path,
     assert second["cache"]["query_encode_calls"] == 0
     assert fresh_embedder.encode_calls == 0
     assert fresh_embedder.load_count == 0, "the model is never even loaded"
+    assert second["cache"]["embedding_model_loaded"] is False
     assert second["cache"]["network_requests"] == 0
     assert fake_ncbi.requests == requests_before
     for name in CACHED_LAYERS:

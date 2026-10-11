@@ -130,13 +130,24 @@ def cmd_runs(args: argparse.Namespace) -> int:
     return 0
 
 
+def plan_with_cache(specs: List[ColumnSpec], settings: Dict[str, Any],
+                    paths: column_pipeline.Paths):
+    """Group the columns, with column vectors read from the paper cache.
+
+    A rerun with the same columns then loads no embedding model at all.
+    """
+    with column_pipeline.make_paper_cache(paths, settings) as paper_cache:
+        return column_pipeline.plan(specs, settings, paper_cache.embedder)
+
+
 def cmd_plan(args: argparse.Namespace) -> int:
     settings = settings_from_args(args)
+    paths = column_pipeline.Paths.from_settings(settings).ensure()
     specs = load_columns(args.columns)
     if not specs:
         log.error("No columns found in %r.", args.columns)
         return 2
-    groups, routings = column_pipeline.plan(specs, settings)
+    groups, routings = plan_with_cache(specs, settings, paths)
     print(json.dumps({
         "columns": len(specs),
         "model_calls_per_paper": sum(1 for g in groups if not g.is_metadata),
@@ -202,7 +213,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             f"${snapshot['cost_usd']:.3f} "
             f"{snapshot['seconds_per_paper']:.0f}s/paper")
 
-    groups, _ = column_pipeline.plan(specs, settings)
+    groups, _ = plan_with_cache(specs, settings, paths)
     llm_calls = sum(1 for g in groups if not g.is_metadata)
     log.info("%d columns -> %d groups (%d model calls per paper)",
              len(specs), len(groups), llm_calls)

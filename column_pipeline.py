@@ -340,6 +340,7 @@ def execute_run(
         paper_cache.flush()
         cache_report = paper_cache.stats.snapshot()
         cache_report["cache_dir"] = str(paths.cache)
+        cache_report["embedding_model_loaded"] = paper_cache.base_embedder.loaded
         cache_report["namespaces"] = {"chunks": paper_cache.chunk_ns,
                                       "embeddings": paper_cache.embed_ns}
         paper_cache.record_run(info.run_id)
