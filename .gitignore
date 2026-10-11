@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# Paper data. This repository ships the application only. Paper text, chunks,
+# embeddings and extracted values must never be committed.
+# ---------------------------------------------------------------------------
+# The paper cache, if it is placed inside the repository
+cache/
+.cache/
+paper_cache/
+.paper-extractor/
+*.lance/
+manifest.sqlite*
+
+# Run outputs: extractions, review queues, Excel files, run databases
+runs/
+outputs/
+work/
+logs/
+inputs/
+*.xlsx
+*.xls
+*.csv
+*.parquet
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.xml.gz
+*.json.gz
+*.jsonl
+*.log
+
+# Paper lists are personal; keep your own links out of the repository
+links*.txt
+papers*.txt
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Large files and models
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.onnx
+models/
+*.zip
+*.tar
+*.tar.gz
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.claude/

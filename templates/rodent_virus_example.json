@@ -1,0 +1,19 @@
+{
+  "name": "Rodent virus screening (example)",
+  "columns": [
+    {"name": "sample size", "type": "integer", "description": "total number of animals or specimens tested in the study", "minimum": 0},
+    {"name": "host species", "description": "the animal species that was sampled, as a Latin binomial if the paper gives one"},
+    {"name": "virus detected", "description": "the virus or pathogen the study looked for"},
+    {"name": "detection method", "type": "categorical", "allowed_values": "PCR, Serology, Virus isolation, Sequencing, Antigen detection, Other", "description": "the laboratory method used to detect the virus"},
+    {"name": "number positive", "type": "integer", "description": "how many animals tested positive", "minimum": 0},
+    {"name": "prevalence percent", "type": "number", "unit": "%", "minimum": 0, "maximum": 100, "description": "the percentage of tested animals that were positive"},
+    {"name": "country of sampling", "description": "the country where the animals were sampled"},
+    {"name": "sampling years", "type": "date", "description": "the calendar years during which animals were collected"},
+    {"name": "study design", "type": "categorical", "allowed_values": "Wild-caught field survey, Experimental infection, Laboratory colony, Cell culture only, Review, Modelling, Other"},
+    {"name": "wild or captive", "type": "categorical", "allowed_values": "Wild, Captive, Both, Not stated"},
+    {"name": "main limitation", "description": "a limitation of the study that the authors state themselves"},
+    {"name": "funding source", "description": "who paid for the study"},
+    {"name": "title"},
+    {"name": "publication year"}
+  ]
+}

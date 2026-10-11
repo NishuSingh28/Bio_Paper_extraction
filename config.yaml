@@ -1,0 +1,57 @@
+# Paper column extractor - defaults.
+#
+# Every section is merged into one flat set of settings, so the section names
+# only group the keys. Environment variables (or a .env file) override these
+# values; see .env.example. Put secrets in .env, never here.
+#
+# Relative paths are relative to this folder. "~" is your home folder.
+
+paths:
+  # The paper cache: raw downloads, parsed text, chunks, BM25 and vectors.
+  # Shared by every run. Any local folder works, including a folder that a
+  # sync tool (Google Drive, Dropbox, OneDrive) backs up. Env: PAPER_CACHE_DIR
+  cache_dir: ~/.paper-extractor/cache
+  # Run outputs: extractions, review queue, Excel files. Env: PAPER_RUNS_DIR
+  runs_dir: runs
+
+model:
+  backend: ollama          # ollama | anthropic | openai | llama_cpp
+  model: qwen2.5:7b        # for ollama: any tag from `ollama list`
+  host: http://localhost:11434
+  temperature: 0.0
+  num_ctx: 8192            # full-text passages need more room than an abstract
+  num_predict: 2048
+  keep_alive: 1h
+  effort: low              # Claude only; raise for columns needing reasoning
+  gguf_path: ""            # llama_cpp only: path to a .gguf file
+  n_gpu_layers: 0          # llama_cpp only
+
+embedding:
+  # A change to any of these three writes to a new cache namespace.
+  embedding_provider: sentence_transformers   # sentence_transformers | openai
+  embedding_model: all-MiniLM-L6-v2
+  embedding_revision: ""   # optional: a model revision, or any label
+
+chunking:
+  # A change to any of these writes to a new cache namespace.
+  chunk_target_tokens: 400
+  chunk_overlap_tokens: 80
+  chunk_min_tokens: 20
+
+retrieval:
+  top_k: 12                # passages per model call
+  token_budget: 2600       # tokens of passage text per model call
+  max_columns_per_call: 8  # a larger group means fewer calls, longer answers
+
+validation:
+  confidence_threshold: 0.6   # below this a value is flagged for review
+  max_retries: 1
+
+execution:
+  extract_workers: 2       # concurrent model calls
+  fetch_workers: 6         # concurrent downloads
+  batch_size: 200          # papers held in memory at once; result is unchanged
+  miss_retry_days: 7       # ask a source again this long after "not found"
+
+output:
+  include_identifiers: true

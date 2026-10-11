@@ -1,0 +1,17 @@
+# Pinned versions this release is tested with. Python 3.10 - 3.12.
+lancedb==0.40.0
+numpy==2.5.3
+openpyxl==3.1.5
+pandas==3.0.6
+pyarrow==25.0.1
+python-dotenv==1.2.4
+PyYAML==6.0.3
+requests==2.34.2
+sentence-transformers==6.1.0
+streamlit==1.64.0
+tqdm==4.70.1
+
+# Optional model backends - install only the one you use.
+# anthropic             # backend: anthropic
+# openai                # backend: openai, or embedding_provider: openai
+# llama-cpp-python      # backend: llama_cpp
