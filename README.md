@@ -71,7 +71,7 @@ You need Python 3.10 to 3.12 and, for the default local model,
 [Ollama](https://ollama.com).
 
 ```bash
-git clone <this repository URL> paper-column-extractor
+git clone https://github.com/NishuSingh28/Bio_Paper_extraction.git paper-column-extractor
 cd paper-column-extractor
 
 python -m venv .venv
