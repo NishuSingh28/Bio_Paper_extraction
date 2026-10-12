@@ -79,6 +79,7 @@ source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env                 # then edit .env: at least NCBI_EMAIL
+                                     # optional: PAPER_CACHE_DIR in Google Drive
 
 ollama pull qwen2.5:7b               # once; keep `ollama serve` running
 
@@ -91,6 +92,9 @@ The app opens in your browser. Then:
 2. **Papers:** paste your links, or upload a list or a workbook.
 3. **Run:** start with a few papers to check the output.
 4. **Results:** read the table and the review queue, and download the Excel file.
+
+To keep the paper cache in Google Drive and reuse it on every computer, see
+[Keep the cache in Google Drive](#keep-the-cache-in-google-drive).
 
 The first run downloads the small embedding model (`all-MiniLM-L6-v2`, about
 90 MB) one time.
@@ -185,10 +189,50 @@ The default is `~/.paper-extractor/cache`. Change it in one of these places
 python cli.py cache path      # print the folder in use
 ```
 
-You can put the cache in a folder that a sync tool backs up, such as Google
-Drive, Dropbox or OneDrive. The app only reads and writes a local path. It has
-no Drive integration and needs no credentials. Use the cache from one computer
-at a time: a sync tool does not merge two SQLite databases.
+### Keep the cache in Google Drive
+
+Put the cache in your Google Drive. Then it survives a new computer or a new
+clone, and every later run reuses it. The app reads and writes a normal local
+folder. Google Drive for desktop copies that folder to your Drive. The app needs
+no Google login and no credentials.
+
+1. Install [Google Drive for desktop](https://www.google.com/drive/download/)
+   and sign in.
+2. In its settings, set **My Drive syncing options** to **Mirror files**.
+   SQLite needs real local files. "Stream files" keeps only online copies.
+3. Set the cache folder in `.env`:
+
+   ```bash
+   # macOS
+   PAPER_CACHE_DIR=~/Library/CloudStorage/GoogleDrive-you@example.com/My Drive/paper-cache
+   # Windows
+   PAPER_CACHE_DIR=G:/My Drive/paper-cache
+   # Linux (no official client; use a folder that rclone or Insync syncs)
+   PAPER_CACHE_DIR=~/GoogleDrive/paper-cache
+   ```
+
+4. Make sure that the app uses the folder:
+
+   ```bash
+   python cli.py cache path
+   ```
+
+On a second computer, do steps 1–3 with the same Drive folder. The second
+computer then reuses every paper that the first computer cached.
+
+Obey these rules, because a sync tool cannot merge two SQLite databases:
+
+- Use the cache from **one computer at a time**.
+- Stop the app on one computer and wait until Drive shows "up to date". Then
+  start the app on the other computer.
+- After a sync conflict, run `python cli.py cache verify`. It repairs or
+  moves aside the bad entries.
+
+Dropbox and OneDrive work the same way: set `PAPER_CACHE_DIR` to a folder in
+the synced directory.
+
+**Do not share your cache folder publicly.** The cache holds the text of the
+papers that you fetched. Each user builds a cache from their own links.
 
 ### What it holds
 
