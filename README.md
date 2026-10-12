@@ -67,7 +67,7 @@ A change to your columns starts a new run. It never touches the paper cache.
 
 ## Quickstart
 
-You need Python 3.10 to 3.12 and, for the default local model,
+You need Python 3.11 to 3.13 and, for the default local model,
 [Ollama](https://ollama.com).
 
 ```bash

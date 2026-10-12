@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Extract user-defined columns from scientific papers, with a persistent local paper cache."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 # Runtime dependencies are pinned in requirements.txt.
 
 [tool.pytest.ini_options]
