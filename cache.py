@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
+import importlib.util
 import io
 import json
 import logging
@@ -518,6 +519,12 @@ class VectorStore:
 
     def __init__(self, root: Path, namespace: str, manifest: Manifest,
                  flush_every: int = VECTOR_FLUSH_PAPERS):
+        # Fail at the start of a run. A missing package must not show as a
+        # failed ingest on every paper.
+        if importlib.util.find_spec("lancedb") is None:
+            raise RuntimeError(
+                "The vector cache needs the 'lancedb' package. "
+                "Run: pip install -r requirements.txt")
         self.root = Path(root)
         self.namespace = namespace
         self.manifest = manifest
@@ -1141,12 +1148,20 @@ def _canonical_key(ref: Any, document: Dict[str, Any]) -> str:
     """The cache key: the strongest identifier the paper turned out to have.
 
     A paper given once as a PMID and once as a PMCID resolves to the same
-    key, so it is cached once.
+    key, so it is cached once. The IDs of the input and the ID converter win.
+    The parsed document adds IDs only when it agrees with the input on one ID.
+    A document that disagrees could carry the ID of a different paper, and
+    two papers must never share a key.
     """
     from fetch import canonical_key
 
-    ids = {**getattr(ref, "ids", {}),
-           **{k: v for k, v in (document.get("ids") or {}).items() if v}}
+    ref_ids = {k: str(v) for k, v in getattr(ref, "ids", {}).items()
+               if k in ("pmcid", "pmid", "doi") and v}
+    doc_ids = {k: str(v) for k, v in (document.get("ids") or {}).items()
+               if k in ("pmcid", "pmid", "doi") and v}
+    agrees = any(doc_ids.get(k, "").lower() == v.lower()
+                 for k, v in ref_ids.items())
+    ids = {**doc_ids, **ref_ids} if (agrees or not ref_ids) else ref_ids
     if any(ids.get(k) for k in ("pmcid", "pmid", "doi")):
         return canonical_key(ids)
     return ref.key

@@ -179,7 +179,7 @@ class ExtractionRunner:
         """Fetch and index one paper. Returns None only on an unexpected error."""
         try:
             return self.paper_store.index_for(ref, self.fetcher)
-        except EmbeddingModelChanged:
+        except (EmbeddingModelChanged, ImportError):
             raise  # every later paper would fail the same way; stop the run
         except Exception as exc:  # noqa: BLE001 - one bad paper must not stop a run
             log.warning("Ingest failed for %s: %s", ref.label, exc)

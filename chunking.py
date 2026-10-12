@@ -106,6 +106,13 @@ def _findall_local(root: ET.Element, name: str) -> List[ET.Element]:
     return [e for e in root.iter() if _tag(e) == name]
 
 
+def _children_local(root: Optional[ET.Element], name: str) -> List[ET.Element]:
+    """Find direct children by local tag name. Do not search deeper."""
+    if root is None:
+        return []
+    return [e for e in root if _tag(e) == name]
+
+
 def _find_local(root: ET.Element, name: str) -> Optional[ET.Element]:
     for element in root.iter():
         if _tag(element) == name:
@@ -356,8 +363,14 @@ def _flatten_table(table_wrap: ET.Element) -> str:
 
 
 def _article_ids(article: ET.Element) -> Dict[str, str]:
+    """The IDs of this article only.
+
+    Read only the first <article-meta>. A sub-article, a related article or a
+    reference can also hold an <article-id>, and that ID is not this paper.
+    """
     ids: Dict[str, str] = {}
-    for element in _findall_local(article, "article-id"):
+    for element in _children_local(_find_local(article, "article-meta"),
+                                   "article-id"):
         kind = (element.get("pub-id-type") or "").lower()
         value = clean_text(element.text)
         if not value:
@@ -590,11 +603,17 @@ def parse_pubmed_article(xml_text: str) -> Optional[Dict[str, Any]]:
     if article is None:
         return None
 
+    # Read the IDs only from MedlineCitation/PMID and PubmedData/ArticleIdList.
+    # The reference list holds an ArticleIdList for each cited paper, and
+    # those IDs are not this paper.
     ids: Dict[str, str] = {}
-    pmid_element = _find_local(article, "PMID")
-    if pmid_element is not None:
+    for pmid_element in _children_local(
+            _find_local(article, "MedlineCitation"), "PMID")[:1]:
         ids["pmid"] = clean_text(pmid_element.text)
-    for other in _findall_local(article, "ArticleId"):
+    id_lists = _children_local(_find_local(article, "PubmedData"),
+                               "ArticleIdList")
+    for other in _children_local(id_lists[0] if id_lists else None,
+                                 "ArticleId"):
         kind = (other.get("IdType") or "").lower()
         value = clean_text(other.text)
         if kind == "doi" and value:

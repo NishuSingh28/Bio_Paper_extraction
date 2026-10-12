@@ -14,10 +14,11 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 import cache as cache_module
+import chunking
 import column_pipeline
 import fetch
 from columns import build_column_set
-from conftest import FakeEmbedder, FakeLLM, FakeNCBI, paper_links
+from conftest import FakeEmbedder, FakeLLM, FakeNCBI, paper_links, pmc_xml
 
 PAPERS = 6
 COLUMNS_A = [{"name": "sample size", "type": "integer"},
@@ -322,3 +323,63 @@ def test_run_outputs_are_separate_from_the_cache(tmp_path: Path,
     assert not any((tmp_path / "runs").rglob("*.parquet"))
     assert os.path.commonpath([tmp_path / "cache", tmp_path / "runs"]) \
         == str(tmp_path)
+
+
+def test_missing_vector_package_stops_the_run(tmp_path: Path, fake_ncbi: FakeNCBI,
+                                              monkeypatch) -> None:
+    """A missing required package stops the run. It does not fail each paper."""
+    real_find_spec = cache_module.importlib.util.find_spec
+    monkeypatch.setattr(
+        cache_module.importlib.util, "find_spec",
+        lambda name, *a: None if name == "lancedb" else real_find_spec(name, *a))
+    with pytest.raises(RuntimeError, match="lancedb"):
+        run_once(tmp_path, COLUMNS_A)
+
+
+PUBMED_WITH_REFERENCES = """<PubmedArticleSet><PubmedArticle>
+  <MedlineCitation><PMID>28714801</PMID>
+    <Article><ArticleTitle>Hantavirus in voles</ArticleTitle>
+      <Abstract><AbstractText>We tested 40 voles by PCR.</AbstractText></Abstract>
+    </Article>
+    <CommentsCorrectionsList><CommentsCorrections><PMID>1111111</PMID>
+    </CommentsCorrections></CommentsCorrectionsList>
+  </MedlineCitation>
+  <PubmedData>
+    <ArticleIdList>
+      <ArticleId IdType="pubmed">28714801</ArticleId>
+      <ArticleId IdType="pmc">PMC5649414</ArticleId>
+      <ArticleId IdType="doi">10.1089/vbz.2017.2108</ArticleId>
+    </ArticleIdList>
+    <ReferenceList><Reference><Citation>A cited paper.</Citation>
+      <ArticleIdList>
+        <ArticleId IdType="pubmed">9999999</ArticleId>
+        <ArticleId IdType="pmc">PMC308517</ArticleId>
+        <ArticleId IdType="doi">10.1000/cited</ArticleId>
+      </ArticleIdList></Reference></ReferenceList>
+  </PubmedData>
+</PubmedArticle></PubmedArticleSet>"""
+
+
+def test_parsers_ignore_the_ids_of_cited_papers() -> None:
+    """The ID of a cited paper or a sub-article is not the ID of the paper."""
+    document = chunking.parse_pubmed_article(PUBMED_WITH_REFERENCES)
+    assert document["ids"] == {"pmid": "28714801", "pmcid": "PMC5649414",
+                               "doi": "10.1089/vbz.2017.2108"}
+
+    xml = pmc_xml(1).replace(
+        "</body>",
+        '</body><sub-article><front-stub>'
+        '<article-id pub-id-type="pmc">PMC308517</article-id>'
+        '<article-id pub-id-type="doi">10.1000/reply</article-id>'
+        '</front-stub></sub-article>')
+    document = chunking.parse_pmc_article(xml)
+    assert document["ids"]["pmcid"] == "PMC1000001"
+    assert "doi" not in document["ids"]
+
+
+def test_papers_that_report_one_id_keep_separate_cache_keys() -> None:
+    """The input IDs win over the parsed IDs, so two papers never share a key."""
+    first, second = (fetch.PaperRef(raw=r, ids={"pmid": r}) for r in ("101", "102"))
+    same_ids = {"pmcid": "PMC308517"}
+    assert (cache_module._canonical_key(first, {"ids": same_ids})
+            != cache_module._canonical_key(second, {"ids": same_ids}))
