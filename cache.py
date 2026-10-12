@@ -605,6 +605,15 @@ class VectorStore:
                         matrix[[i for _, _, i in items]])
         return out
 
+    def pending(self, paper_key: str, content_hash: str
+                ) -> Optional[Tuple[List[str], np.ndarray]]:
+        """Vectors put in this run but not yet committed, for the same text."""
+        with self._lock:
+            entry = self._pending.get(paper_key)
+            if entry is None or entry[0] != content_hash:
+                return None
+            return entry[1], entry[2]
+
     def get(self, paper_key: str) -> Optional[Tuple[List[str], np.ndarray]]:
         with self._lock:
             if paper_key in self._pending:
@@ -1042,10 +1051,15 @@ class PaperCache:
     # ----------------------------------------------------------------- #
     def _load_vectors(self, paper_key: str, digest: str,
                       chunks: List[Dict[str, Any]]) -> Optional[np.ndarray]:
-        row = self.manifest.layer(paper_key, "embeddings", self.vector_ns)
-        if row is None or row["status"] != "ok" or row["content_hash"] != digest:
-            return None
-        stored = self.vectors.get(paper_key)
+        # The manifest marks vectors `ok` only after the commit. Vectors from
+        # earlier in this run are still in the buffer.
+        stored = self.vectors.pending(paper_key, digest)
+        if stored is None:
+            row = self.manifest.layer(paper_key, "embeddings", self.vector_ns)
+            if (row is None or row["status"] != "ok"
+                    or row["content_hash"] != digest):
+                return None
+            stored = self.vectors.get(paper_key)
         if stored is None:
             return None
         chunk_ids, matrix = stored
@@ -1072,11 +1086,19 @@ class PaperCache:
     # ----------------------------------------------------------------- #
     def index_for(self, ref: Any, fetcher: Any) -> PaperIndex:
         """Return a search index for one paper, building only missing layers."""
-        with self._lock_for(ref.key):
+        # Lock on the key of the resolved IDs. Two links to one paper in one
+        # batch (a PMID and its PMCID) then build the paper once, not twice.
+        ids_key = _canonical_key(ref, {})
+        with self._lock_for(ids_key):
             document = None
             paper_key = self.paper_key_for(ref.key)
             if paper_key:
                 document = self._load_parsed(paper_key)
+            elif ids_key != ref.key:
+                document = self._load_parsed(ids_key)
+                if document is not None:
+                    paper_key = ids_key
+                    self._alias(ref.key, paper_key)
             if document is not None:
                 self.stats.hit("parsed")
             else:

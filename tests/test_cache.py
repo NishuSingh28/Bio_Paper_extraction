@@ -383,3 +383,14 @@ def test_papers_that_report_one_id_keep_separate_cache_keys() -> None:
     same_ids = {"pmcid": "PMC308517"}
     assert (cache_module._canonical_key(first, {"ids": same_ids})
             != cache_module._canonical_key(second, {"ids": same_ids}))
+
+
+def test_one_paper_given_twice_in_one_run_is_built_once(
+        tmp_path: Path, fake_ncbi: FakeNCBI) -> None:
+    """A PMCID and its PMID in one batch: one download, one embedding call."""
+    stats = run_once(tmp_path, COLUMNS_A, links=["PMC1000002", "2000002"])
+    assert stats["done"] == 2
+    assert stats["cache"]["embedding_calls"] == 1
+    assert layer(stats, "parsed") == {"hits": 1, "misses": 1,
+                                      "hit_rate": 0.5}
+    assert fake_ncbi.requests == 2          # one ID lookup, one download
